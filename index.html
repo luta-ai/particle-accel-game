@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>粒子加速実験室</title>
+    <style>
+        body { 
+            background-color: #000000; 
+            margin: 0; 
+            font-family: 'Roboto Mono', monospace;
+            color: #39FF14;
+        }
+        #gameWrapper {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            box-sizing: border-box;
+            min-height: 100vh;
+        }
+        .panel {
+            background-color: rgba(0,0,0,0.7);
+            border: 2px solid #39FF14;
+            padding: 10px;
+            margin: 0 10px;
+            border-radius: 10px;
+            width: 200px;
+        }
+        #gamePanel {
+            width: 400px;
+        }
+        h1, h2, h3 {
+            font-family: 'Orbitron', sans-serif;
+            color: #39FF14;
+            text-align: center;
+            margin: 0 0 10px 0;
+            text-shadow: 0 0 5px #39FF14;
+        }
+        #gameInfo {
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            border: 2px solid #39FF14;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        #gameTitle {
+            cursor: pointer;
+        }
+        #gameContainer {
+            position: relative;
+            width: 400px;
+            height: 600px;
+        }
+        canvas { 
+            border: 2px solid #39FF14;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #39FF14;
+        }
+        #controls {
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #39FF14;
+            margin-top: 10px;
+            text-align: center;
+        }
+        #startButton, #restartButton, #clearDataButton {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: #000000;
+            color: #39FF14;
+            border: 1px solid #39FF14;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        #startButton:hover, #restartButton:hover, #clearDataButton:hover {
+            background-color: #39FF14;
+            color: #000000;
+            box-shadow: 0 0 10px #39FF14;
+        }
+        #startButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #39FF14;
+            display: none;
+            width: 80%;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+        .discoveryList {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            overflow-y: auto;
+            max-height: 500px;
+        }
+        .discoveryList li {
+            margin-bottom: 10px;
+            border-bottom: 1px solid #39FF14;
+            padding-bottom: 5px;
+            cursor: pointer;
+        }
+        #highScoreList {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        #highScoreList li {
+            margin-bottom: 5px;
+        }
+        .rare { color: #FFD700; }
+        .very-rare { color: #FF1493; }
+        .ultra-rare { color: #00FFFF; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #000;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #39FF14;
+            width: 80%;
+            max-width: 600px;
+            color: #39FF14;
+        }
+        .close {
+            color: #39FF14;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover,
+        .close:focus {
+            color: #00ff00;
+            text-decoration: none;
+        }
+        #experimentInfoModal .modal-content {
+            text-align: left;
+            line-height: 1.6;
+        }
+        #experimentInfoModal h2 {
+            margin-bottom: 20px;
+        }
+        #experimentInfoModal p {
+            margin-bottom: 15px;
+        }
+        #experimentInfoModal ul {
+            margin-bottom: 15px;
+            padding-left: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            #gameWrapper {
+                flex-direction: column;
+                align-items: center;
+            }
+            .panel {
+                width: 400px;
+                margin: 10px 0;
+            }
+            #gamePanel {
+                order: -1;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #gameWrapper {
+                padding: 10px;
+            }
+            #gamePanel, .panel {
+                width: 100%;
+            }
+            #gameContainer {
+                width: 100%;
+                height: auto;
+            }
+            canvas {
+                width: 100%;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameWrapper">
+        <div id="discoveryHistoryPanel" class="panel">
+            <h3>発見履歴</h3>
+            <ul id="discoveryHistoryList" class="discoveryList"></ul>
+        </div>
+        <div id="gamePanel">
+            <div id="gameInfo">
+                <h1 id="gameTitle">粒子加速実験室</h1>
+                レベル: <span id="level">1</span> | 
+                エネルギー: <span id="energy">1</span> MeV | 
+                スコア: <span id="score"></span>
+            </div>
+            <div id="gameContainer">
+                <canvas id="gameCanvas" width="400" height="600"></canvas>
+                <button id="startButton">実験開始</button>
+                <div id="gameOver">
+                    <h2>実験終了</h2>
+                    <p>最終スコア: <span id="finalScore">0</span>pt</p>
+                    <div id="highScores">
+                        <h3>ハイスコア</h3>
+                        <ol id="highScoreList"></ol>
+                    </div>
+                    <button id="restartButton">再実験</button>
+                    <button id="clearDataButton">ゲームデータを削除</button>
+                </div>
+            </div>
+            <div id="controls">
+                SPACEで方向転換, ← →で軌道調整
+            </div>
+        </div>
+        <div id="currentDiscoveryPanel" class="panel">
+            <h3>今回の発見</h3>
+            <ul id="currentDiscoveryList" class="discoveryList"></ul>
+        </div>
+    </div>
+
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle"></h2>
+            <p id="modalDescription"></p>
+        </div>
+    </div>
+
+    <div id="experimentInfoModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>粒子加速実験について</h2>
+            <p>粒子加速実験は、高エネルギー物理学の中心的な実験手法です。この実験では、電子やプロトンなどの素粒子を非常に高いエネルギーまで加速し、他の粒子と衝突させます。その結果生じる現象を観測することで、物質の最も基本的な構成要素とその相互作用について研究します。</p>
+            <p><strong>主な目的：</strong></p>
+            <ul>
+                <li>新しい粒子の発見</li>
+                <li>既知の粒子の性質の精密測定</li>
+                <li>基本的な物理法則の検証</li>
+                <li>宇宙初期の状態の再現</li>
+            </ul>
+            <p><strong>有名な加速器施設：</strong></p>
+            <ul>
+                <li>欧州原子核研究機構（CERN）の大型ハドロン衝突型加速器（LHC）</li>
+                <li>米国フェルミ国立加速器研究所のテバトロン</li>
+            </ul>
+            <p>これらの実験は、ヒッグス粒子の発見や、クォーク・グルーオンプラズマの生成など、物理学に革命的な発見をもたらしてきました。</p>
+            <p>このゲームでは、プレイヤーは仮想の粒子加速器を操作し、様々な粒子や現象を発見することで、高エネルギー物理学の世界を体験します。</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startButton = document.getElementById('startButton');
+        const restartButton = document.getElementById('restartButton');
+        const clearDataButton = document.getElementById('clearDataButton');
+        const gameOverScreen = document.getElementById('gameOver');
+        const levelDisplay = document.getElementById('level');
+        const energyDisplay = document.getElementById('energy');
+        const scoreDisplay = document.getElementById('score');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const currentDiscoveryList = document.getElementById('currentDiscoveryList');
+        const discoveryHistoryList = document.getElementById('discoveryHistoryList');
+        const highScoreList = document.getElementById('highScoreList');
+        const detailModal = document.getElementById('detailModal');
+        const experimentInfoModal = document.getElementById('experimentInfoModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalDescription = document.getElementById('modalDescription');
+        const closeButtons = document.getElementsByClassName("close");
+        const gameTitle = document.getElementById('gameTitle');
+
+        let gameState = 'start';
+        let player, goal, obstacles, energyLevel, score, level;
+        let particles = [];
+        let isLevelCompleting = false;
+        let currentDiscoveries = [];
+        let discoveryHistory = {};
+        let highScores = [];
+
+        const discoveries = {
+            common: [
+                { name: "電子-陽電子対生成", description: "電子と陽電子のペアが生成されました。これは、高エネルギー光子が強い電場と相互作用して起こる現象です。この過程は、アインシュタインの質量とエネルギーの等価性（E=mc²）を直接的に示す重要な例です。", points: 10, rarity: "common" },
+                { name: "ミューオンの検出", description: "ミュー粒子が観測されました。ミューオンは電子の重い「いとこ」で、宇宙線の主要な構成要素です。その寿命は約2.2マイクロ秒と短いですが、相対論的効果により地表まで到達します。これは時間の遅れの実証例として重要です。", points: 15, rarity: "common" },
+                { name: "パイ中間子の観測", description: "パイ中間子が検出されました。これらは強い核力を媒介する粒子で、クォークとアンチクォークから構成されています。湯川秀樹博士によって理論的に予言され、その後の発見により日本人初のノーベル物理学賞受賞につながりました。", points: 20, rarity: "common" },
+                { name: "中性子の放出", description: "中性子の放出が確認されました。中性子は原子核を構成する粒子の一つで、電荷を持たないため直接検出が難しい粒子です。中性子の発見は原子核の構造理解に革命をもたらし、後の核分裂の発見につながりました。", points: 25, rarity: "common" },
+                { name: "ガンマ線バーストの検出", description: "高エネルギーのガンマ線が観測されました。これは宇宙で最も激しい爆発現象の一つで、遠方の銀河で発生しています。その起源は長年の謎でしたが、現在では超新星爆発や中性子星の合体などが原因と考えられています。", points: 30, rarity: "common" },
+                { name: "ニュートリノの検出", description: "ニュートリノが観測されました。これらは極めて軽く、ほとんど物質と相互作用しない幽霊のような粒子です。太陽や超新星からのニュートリノの検出は、これらの天体の内部構造を理解する上で重要な役割を果たしています。", points: 35, rarity: "common" },
+                { name: "トップクォークの生成", description: "トップクォークが生成されました。これは6種類あるクォークの中で最も重く、その質量は金の原子核とほぼ同じです。その発見は標準模型の予言を確認し、素粒子物理学の理解を大きく前進させました。", points: 40, rarity: "common" }
+            ],
+            rare: [
+                { name: "ヒッグス粒子の発見", description: "質量の起源とされるヒッグス粒子が発見されました！この粒子は、他の素粒子に質量を与える機構を説明する上で重要な役割を果たしています。その存在は1964年に理論的に予言されましたが、実験的な発見は2012年まで待たなければなりませんでした。この発見により、素粒子物理学の標準模型が完成しました。", points: 1000, rarity: "rare" },
+                { name: "反物質の生成", description: "安定した反物質の生成に成功しました！反物質は通常の物質と同じ質量を持ちますが、電荷が逆転しています。宇宙初期には同量存在していたと考えられていますが、現在の宇宙ではほとんど観測されません。この非対称性の原因は、現代物理学の大きな謎の一つです。", points: 1500, rarity: "very-rare" },
+                { name: "クォーク・グルーオンプラズマの観測", description: "初期宇宙の状態を再現しました！この状態では、クォークとグルーオンが自由に動き回ることができ、通常の物質とは全く異なる性質を示します。この状態の研究は、宇宙誕生直後の状態や、中性子星の内部構造の理解に貢献しています。", points: 2000, rarity: "very-rare" },
+                { name: "超対称性粒子の検出", description: "理論上の超対称性粒子を初めて観測しました！これらの粒子は、既知の粒子のパートナーとして存在すると予想されており、暗黒物質の候補の一つです。超対称性理論は、重力を含むすべての基本的な力を統一する可能性を秘めており、物理学の「究極の理論」につながる可能性があります。", points: 2500, rarity: "ultra-rare" },
+                { name: "暗黒物質の痕跡", description: "暗黒物質の存在を示唆する証拠を発見しました！暗黒物質は通常の物質とほとんど相互作用しませんが、重力を通じてその存在が推測されています。宇宙の質量の約85%を占めると考えられていますが、その正体は依然として謎に包まれています。この発見は、宇宙の構造と進化の理解に大きな影響を与える可能性があります。", points: 3000, rarity: "ultra-rare" },
+                { name: "重力波の直接検出", description: "重力波を直接検出することに成功しました！アインシュタインの一般相対性理論によって予言された重力波は、時空のゆがみが波として伝わる現象です。この検出は、ブラックホールの合体や中性子星の衝突など、宇宙で最も激しい現象を観測する新しい窓を開きました。", points: 3500, rarity: "ultra-rare" }
+            ]
+        };
+
+        function initGame() {
+            isLevelCompleting = false;
+            player = {
+                x: canvas.width / 2,
+                y: canvas.height - 30,
+                radius: 5,
+                baseAcceleration: 0.2,
+                maxSpeed: 5,
+                vx: 0,
+                ax: 0,
+                baseVerticalSpeed: 2,
+                direction: -1,
+                visible: true
+            };
+            goal = {
+                x: canvas.width / 2,
+                y: 50,
+                radius: 20,
+                dx: 0,
+                dy: 0,
+                visible: true
+            };
+            obstacles = [];
+            let obstacleCount = 2 + Math.floor((level - 1) / 3);
+            for (let i = 0; i < obstacleCount; i++) {
+                obstacles.push(createObstacle());
+            }
+            energyLevel = 1;
+            particles = [];
+            updateDisplay();
+        }
+
+        function createObstacle() {
+            return {
+                x: Math.random() * (canvas.width - 50),
+                y: Math.random() * (canvas.height - 200) + 100,
+                width: 50,
+                height: 20,
+                dx: (Math.random() - 0.5) * (1 + level * 0.5),
+                dy: (Math.random() - 0.5) * (1 + level * 0.5)
+            };
+        }
+
+        function drawGame() {
+            ctx.fillStyle = '#001100';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // グリッドライン
+            ctx.strokeStyle = '#003300';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.width; i += 20) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+            }
+            for (let i = 0; i < canvas.height; i += 20) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+
+            // プレイヤー
+            if (player.visible) {
+                ctx.fillStyle = '#39FF14';
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.radius + energyLevel / 20, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 障害物
+            ctx.strokeStyle = '#39FF14';
+            ctx.lineWidth = 2;
+            obstacles.forEach(obs => {
+                ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+            });
+
+            // ゴール
+            if (goal.visible) {
+                ctx.strokeStyle = '#39FF14';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(goal.x, goal.y, goal.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(goal.x, goal.y, goal.radius / 2, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // パーティクル
+            ctx.globalAlpha = 1;
+            particles.forEach((p, index) => {
+                p.life--;
+                if (p.life <= 0) {
+                    particles.splice(index, 1);
+                } else {
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.life / p.maxLife;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        function updateGame() {
+            if (player.visible) {
+                // 垂直方向の移動（エネルギーに応じて速度が変化）
+                let verticalSpeed = player.baseVerticalSpeed * (1 + energyLevel / 50);
+                player.y += verticalSpeed * player.direction;
+                if (player.y <= player.radius || player.y >= canvas.height - player.radius) {
+                    player.direction *= -1;
+                }
+
+                // 水平方向の移動（エネルギーに依存しない）
+                player.vx += player.ax;
+                player.vx = Math.max(Math.min(player.vx, player.maxSpeed), -player.maxSpeed);
+                player.vx *= 0.98; // 摩擦
+                player.x += player.vx;
+
+                // 画面端での跳ね返り
+                if (player.x < player.radius) {
+                    player.x = player.radius;
+                    player.vx *= -0.5;
+                } else if (player.x > canvas.width - player.radius) {
+                    player.x = canvas.width - player.radius;
+                    player.vx *= -0.5;
+                }
+            }
+
+            obstacles.forEach(obs => {
+                obs.x += obs.dx;
+                obs.y += obs.dy;
+                if (obs.x <= 0 || obs.x + obs.width >= canvas.width) obs.dx *= -1;
+                if (obs.y <= 0 || obs.y + obs.height >= canvas.height) obs.dy *= -1;
+
+                if (player.visible && player.x + player.radius > obs.x && 
+                    player.x - player.radius < obs.x + obs.width &&
+                    player.y + player.radius > obs.y && 
+                    player.y - player.radius < obs.y + obs.height) {
+                    gameOver();
+                }
+            });
+
+            if (level > 3 && !isLevelCompleting) {
+                goal.x += goal.dx;
+                goal.y += goal.dy;
+                if (goal.x <= goal.radius || goal.x >= canvas.width - goal.radius) goal.dx *= -1;
+                if (goal.y <= goal.radius || goal.y >= canvas.height - goal.radius) goal.dy *= -1;
+            }
+
+            if (!isLevelCompleting && player.visible && goal.visible &&
+                Math.hypot(player.x - goal.x, player.y - goal.y) < player.radius + goal.radius) {
+                levelComplete();
+            }
+
+            energyLevel += 0.1;
+            updateDisplay();
+
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.05;
+                p.vx *= 0.99;
+                p.vy *= 0.99;
+            });
+        }
+
+        function createParticles(x, y, amount, color) {
+            for (let i = 0; i < amount; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 5,
+                    vy: (Math.random() - 0.5) * 5,
+                    radius: Math.random() * 3 + 1,
+                    color: color,
+                    life: 60,
+                    maxLife: 60
+                });
+            }
+        }
+
+        function makeDiscovery() {
+            let discoveredItems = [];
+            
+            // 一般的な発見（必ず1つ）
+            let commonDiscovery = discoveries.common[Math.floor(Math.random() * discoveries.common.length)];
+            discoveredItems.push(commonDiscovery);
+            
+            // 希少な発見（各1%の確率）
+            discoveries.rare.forEach(rareDiscovery => {
+                if (Math.random() < 0.01) {
+                    discoveredItems.push(rareDiscovery);
+                }
+            });
+            
+            return discoveredItems;
+        }
+
+        function addToCurrentDiscoveries(discoveries) {
+            discoveries.forEach(discovery => {
+                let existingDiscovery = currentDiscoveries.find(d => d.name === discovery.name);
+                if (existingDiscovery) {
+                    existingDiscovery.count++;
+                } else {
+                    currentDiscoveries.push({...discovery, count: 1});
+                }
+            });
+            updateCurrentDiscoveryDisplay();
+        }
+
+        function updateCurrentDiscoveryDisplay() {
+            currentDiscoveryList.innerHTML = '';
+            currentDiscoveries.forEach(discovery => {
+                const li = document.createElement('li');
+                let rarityText = '';
+                if (discovery.rarity === 'rare') rarityText = ' [レア]';
+                if (discovery.rarity === 'very-rare') rarityText = ' [激レア]';
+                if (discovery.rarity === 'ultra-rare') rarityText = ' [超激レア]';
+                li.innerHTML = `<span class="${discovery.rarity}">${discovery.name}${rarityText}</span> x${discovery.count} (+${discovery.points}pt)`;
+                li.addEventListener('click', () => showDiscoveryDetails(discovery));
+                currentDiscoveryList.appendChild(li);
+            });
+        }
+
+        function updateDiscoveryHistory() {
+            currentDiscoveries.forEach(discovery => {
+                if (discoveryHistory[discovery.name]) {
+                    discoveryHistory[discovery.name].count += discovery.count;
+                } else {
+                    discoveryHistory[discovery.name] = {...discovery, count: discovery.count};
+                }
+            });
+            localStorage.setItem('discoveryHistory', JSON.stringify(discoveryHistory));
+            updateDiscoveryHistoryDisplay();
+        }
+
+        function updateDiscoveryHistoryDisplay() {
+            discoveryHistoryList.innerHTML = '';
+            for (let [name, discovery] of Object.entries(discoveryHistory)) {
+                const li = document.createElement('li');
+                let rarityText = '';
+                if (discovery.rarity === 'rare') rarityText = ' [レア]';
+                if (discovery.rarity === 'very-rare') rarityText = ' [激レア]';
+                if (discovery.rarity === 'ultra-rare') rarityText = ' [超激レア]';
+                li.innerHTML = `<span class="${discovery.rarity}">${name}${rarityText}</span> x${discovery.count}`;
+                li.addEventListener('click', () => showDiscoveryDetails(discovery));
+                discoveryHistoryList.appendChild(li);
+            }
+        }
+
+        function showDiscoveryDetails(discovery) {
+            modalTitle.textContent = discovery.name;
+            modalDescription.textContent = discovery.description;
+            detailModal.style.display = "block";
+        }
+
+        function loadDiscoveryHistory() {
+            const savedHistory = localStorage.getItem('discoveryHistory');
+            if (savedHistory) {
+                discoveryHistory = JSON.parse(savedHistory);
+                updateDiscoveryHistoryDisplay();
+            }
+        }
+
+        function updateDisplay() {
+            levelDisplay.textContent = level;
+            energyDisplay.textContent = Math.floor(energyLevel);
+            scoreDisplay.textContent = score ? score + "pt" : "";
+        }
+
+        function gameLoop() {
+            if (gameState === 'playing') {
+                updateGame();
+                drawGame();
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function startGame() {
+            gameState = 'playing';
+            level = 1;
+            score = 0;
+            currentDiscoveries = [];
+            updateCurrentDiscoveryDisplay(); // 今回の発見リストをクリア
+            initGame();
+            startButton.style.display = 'none';
+            gameLoop();
+        }
+
+        function gameOver() {
+            gameState = 'over';
+            finalScoreDisplay.textContent = score + "pt";
+            updateHighScores();
+            displayHighScores();
+            gameOverScreen.style.display = 'block';
+            updateDiscoveryHistory();
+        }
+
+        function updateHighScores() {
+            highScores = JSON.parse(localStorage.getItem('highScores') || '[]');
+            highScores.push(score);
+            highScores.sort((a, b) => b - a);
+            highScores = highScores.slice(0, 10);
+            localStorage.setItem('highScores', JSON.stringify(highScores));
+        }
+
+        function displayHighScores() {
+            highScoreList.innerHTML = '';
+            const suffixes = ['st', 'nd', 'rd'];
+            highScores.forEach((score, index) => {
+                const li = document.createElement('li');
+                const suffix = index <= 2 ? suffixes[index] : 'th';
+                li.textContent = `${index + 1}${suffix} ${score}pt`;
+                highScoreList.appendChild(li);
+            });
+        }
+
+        function levelComplete() {
+            if (isLevelCompleting) return;
+            isLevelCompleting = true;
+
+            let newDiscoveries = makeDiscovery();
+            addToCurrentDiscoveries(newDiscoveries);
+            
+            newDiscoveries.forEach(discovery => {
+                score += discovery.points;
+            });
+
+            // エネルギーによるスコア加算
+            let energyScore = Math.floor(energyLevel / 5);
+            score += energyScore;
+
+            createParticles(goal.x, goal.y, 100, '#39FF14');
+            player.visible = false;
+            goal.visible = false;
+            level++;
+            updateDisplay();
+
+            setTimeout(() => {
+                initGame();
+                if (level > 3) {
+                    goal.dx = (Math.random() - 0.5) * (level - 3) * 0.5;
+                    goal.dy = (Math.random() - 0.5) * (level - 3) * 0.5;
+                }
+                isLevelCompleting = false;
+            }, 2000);
+        }
+
+        function clearGameData() {
+            localStorage.removeItem('highScores');
+            localStorage.removeItem('discoveryHistory');
+            highScores = [];
+            discoveryHistory = {};
+            updateDiscoveryHistoryDisplay();
+            displayHighScores();
+            alert('ゲームデータが削除されました。');
+        }
+
+        function showExperimentInfo() {
+            experimentInfoModal.style.display = "block";
+        }
+
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', () => {
+            gameOverScreen.style.display = 'none';
+            startGame();
+        });
+        clearDataButton.addEventListener('click', clearGameData);
+        gameTitle.addEventListener('click', showExperimentInfo);
+
+        document.addEventListener('keydown', (e) => {
+            if (gameState === 'playing' && player.visible) {
+                switch(e.code) {
+                    case 'ArrowLeft':
+                        player.ax = -player.baseAcceleration;
+                        break;
+                    case 'ArrowRight':
+                        player.ax = player.baseAcceleration;
+                        break;
+                    case 'Space':
+                        e.preventDefault();
+                        player.direction *= -1;
+                        break;
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (gameState === 'playing' && player.visible) {
+                switch(e.code) {
+                    case 'ArrowLeft':
+                    case 'ArrowRight':
+                        player.ax = 0;
+                        break;
+                }
+            }
+        });
+
+        Array.from(closeButtons).forEach(button => {
+            button.onclick = function() {
+                detailModal.style.display = "none";
+                experimentInfoModal.style.display = "none";
+            }
+        });
+
+        window.onclick = function(event) {
+            if (event.target == detailModal) {
+                detailModal.style.display = "none";
+            }
+            if (event.target == experimentInfoModal) {
+                experimentInfoModal.style.display = "none";
+            }
+        }
+
+        loadDiscoveryHistory();
+        initGame();
+        drawGame();
+    </script>
+</body>
+</html>

@@ -101,7 +101,6 @@
             display: flex;
             justify-content: space-around;
             padding: 0 10px;
-            pointer-events: none;
         }
         .game-button {
             background-color: rgba(57, 255, 20, 0.3);
@@ -110,7 +109,8 @@
             font-size: 24px;
             padding: 10px 20px;
             border-radius: 5px;
-            pointer-events: none;
+            cursor: pointer;
+            pointer-events: auto;
         }
         #leftButton, #rightButton {
             font-size: 36px;
@@ -122,18 +122,6 @@
         }
         #directionButton {
             font-size: 16px;
-        }
-        .touch-area {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 50%;
-        }
-        #leftTouchArea {
-            left: 0;
-        }
-        #rightTouchArea {
-            right: 0;
         }
         #startButton, #restartButton, #clearDataButton {
             font-family: 'Orbitron', sans-serif;
@@ -200,6 +188,7 @@
         .rare { color: #FFD700; }
         .very-rare { color: #FF1493; }
         .ultra-rare { color: #00FFFF; }
+
         .modal {
             display: none;
             position: fixed;
@@ -246,6 +235,7 @@
             margin-bottom: 15px;
             padding-left: 20px;
         }
+
         @media (max-width: 1023px) {
             #mainGameArea {
                 flex-direction: column;
@@ -268,6 +258,7 @@
                 order: 3;
             }
         }
+
         @media (max-width: 480px) {
             #gamePanel {
                 max-width: 100%;
@@ -299,8 +290,6 @@
                         <button id="directionButton" class="game-button">方向転換</button>
                         <button id="rightButton" class="game-button">▷</button>
                     </div>
-                    <div id="leftTouchArea" class="touch-area"></div>
-                    <div id="rightTouchArea" class="touch-area"></div>
                     <div id="gameOver">
                         <h2>実験終了</h2>
                         <p>最終スコア: <span id="finalScore">0</span>pt</p>
@@ -373,8 +362,6 @@
         const modalDescription = document.getElementById('modalDescription');
         const closeButtons = document.getElementsByClassName("close");
         const gameTitle = document.getElementById('gameTitle');
-        const leftTouchArea = document.getElementById('leftTouchArea');
-        const rightTouchArea = document.getElementById('rightTouchArea');
 
         let gameState = 'start';
         let player, goal, obstacles, energyLevel, score, level;
@@ -801,33 +788,34 @@
         clearDataButton.addEventListener('click', clearGameData);
         gameTitle.addEventListener('click', showExperimentInfo);
 
-        directionButton.addEventListener('click', () => {
-            if (gameState === 'playing' && player.visible) {
-                player.direction *= -1;
-            }
-        });
-
-        leftTouchArea.addEventListener('touchstart', (e) => {
+        leftButton.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (gameState === 'playing' && player.visible) {
                 player.ax = -player.baseAcceleration;
             }
         });
 
-        rightTouchArea.addEventListener('touchstart', (e) => {
+        rightButton.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (gameState === 'playing' && player.visible) {
                 player.ax = player.baseAcceleration;
             }
         });
 
-        [leftTouchArea, rightTouchArea].forEach(area => {
-            area.addEventListener('touchend', (e) => {
+        [leftButton, rightButton].forEach(button => {
+            button.addEventListener('touchend', (e) => {
                 e.preventDefault();
                 if (gameState === 'playing' && player.visible) {
                     player.ax = 0;
                 }
             });
+        });
+
+        directionButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState === 'playing' && player.visible) {
+                player.direction *= -1;
+            }
         });
 
         document.addEventListener('keydown', (e) => {

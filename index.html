@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>粒子加速実験室</title>
     <style>
         body { 
@@ -19,9 +19,8 @@
         }
         #gameWrapper {
             display: flex;
-            flex-direction: row;
-            justify-content: center;
-            align-items: flex-start;
+            flex-direction: column;
+            align-items: center;
             max-width: 1200px;
             width: 100%;
         }
@@ -29,14 +28,40 @@
             background-color: rgba(0,0,0,0.7);
             border: 2px solid #39FF14;
             padding: 10px;
-            margin: 0 10px;
+            margin: 10px;
             border-radius: 10px;
-            width: 250px;
             box-sizing: border-box;
+        }
+        #gameTitlePanel {
+            text-align: center;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+        #gameTitle {
+            font-size: 24px;
+            margin: 0;
+            cursor: pointer;
+        }
+        #mainGameArea {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1200px;
         }
         #gamePanel {
             width: 400px;
-            margin: 0 20px;
+            height: 600px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #39FF14;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #39FF14;
+        }
+        #discoveryHistoryPanel, #currentDiscoveryPanel {
+            width: calc((100% - 400px - 40px) / 2);
+            height: 600px;
+            overflow-y: auto;
         }
         h1, h2, h3 {
             font-family: 'Orbitron', sans-serif;
@@ -46,41 +71,46 @@
             text-shadow: 0 0 5px #39FF14;
         }
         #gameInfo {
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            border-radius: 5px;
-            border: 2px solid #39FF14;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        #gameTitle {
-            cursor: pointer;
-        }
-        #gameContainer {
-            position: relative;
-            width: 400px;
-            height: 600px;
-        }
-        canvas { 
-            border: 2px solid #39FF14;
-            border-radius: 10px;
-            box-shadow: 0 0 10px #39FF14;
-        }
-        #gameControlsWrapper {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 10px;
-        }
-        #controls {
-            background-color: rgba(0, 0, 0, 0.7);
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
             padding: 5px;
             border-radius: 5px;
-            border: 1px solid #39FF14;
-            text-align: center;
-            flex-grow: 1;
+            font-size: 14px;
+            z-index: 10;
         }
-        button {
+        #gameContainer {
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(to right, #003300 1px, transparent 1px),
+                linear-gradient(to bottom, #003300 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        canvas { 
+            width: 100%;
+            height: 100%;
+        }
+        #directionButton {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            padding: 10px 15px;
+            cursor: pointer;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: #39FF14;
+            border: 1px solid #39FF14;
+            border-radius: 5px;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+        #directionButton:hover {
+            background-color: rgba(57, 255, 20, 0.3);
+        }
+        #startButton, #restartButton, #clearDataButton {
             font-family: 'Orbitron', sans-serif;
             font-size: 18px;
             padding: 10px 20px;
@@ -92,7 +122,7 @@
             border-radius: 5px;
             transition: all 0.3s;
         }
-        button:hover {
+        #startButton:hover, #restartButton:hover, #clearDataButton:hover {
             background-color: #39FF14;
             color: #000000;
             box-shadow: 0 0 10px #39FF14;
@@ -103,6 +133,8 @@
             left: 50%;
             transform: translate(-50%, -50%);
             z-index: 10;
+            font-size: 24px;
+            padding: 15px 30px;
         }
         #gameOver {
             position: absolute;
@@ -118,13 +150,14 @@
             width: 80%;
             max-height: 80%;
             overflow-y: auto;
+            z-index: 20;
         }
         .discoveryList {
             list-style-type: none;
             padding: 0;
             margin: 0;
             overflow-y: auto;
-            max-height: 500px;
+            max-height: 520px;
         }
         .discoveryList li {
             margin-bottom: 10px;
@@ -190,34 +223,37 @@
             padding-left: 20px;
         }
 
-        @media (max-width: 1200px) {
-            #gameWrapper {
+        @media (max-width: 1023px) {
+            #mainGameArea {
                 flex-direction: column;
                 align-items: center;
             }
-            .panel {
+            #gamePanel, #discoveryHistoryPanel, #currentDiscoveryPanel {
                 width: 100%;
                 max-width: 400px;
                 margin: 10px 0;
             }
             #gamePanel {
-                order: -1;
+                height: 600px;
+            }
+            #discoveryHistoryPanel, #currentDiscoveryPanel {
+                height: auto;
+                max-height: 300px;
+            }
+            #discoveryHistoryPanel {
+                order: 3;
             }
         }
 
         @media (max-width: 480px) {
-            #gameWrapper {
-                padding: 10px;
-            }
-            #gamePanel, .panel {
-                width: 100%;
+            #gamePanel {
+                height: 0;
+                padding-bottom: 150%; /* 2:3のアスペクト比を維持 */
             }
             #gameContainer {
-                width: 100%;
-                height: auto;
-                aspect-ratio: 2 / 3;
-            }
-            canvas {
+                position: absolute;
+                top: 0;
+                left: 0;
                 width: 100%;
                 height: 100%;
             }
@@ -226,41 +262,40 @@
 </head>
 <body>
     <div id="gameWrapper">
-        <div id="discoveryHistoryPanel" class="panel">
-            <h3>発見履歴</h3>
-            <ul id="discoveryHistoryList" class="discoveryList"></ul>
+        <div id="gameTitlePanel" class="panel">
+            <h1 id="gameTitle">粒子加速実験室</h1>
         </div>
-        <div id="gamePanel">
-            <div id="gameInfo">
-                <h1 id="gameTitle">粒子加速実験室</h1>
-                レベル: <span id="level">1</span> | 
-                エネルギー: <span id="energy">1</span> MeV | 
-                スコア: <span id="score">0</span>pt
+        <div id="mainGameArea">
+            <div id="discoveryHistoryPanel" class="panel">
+                <h3>発見履歴</h3>
+                <ul id="discoveryHistoryList" class="discoveryList"></ul>
             </div>
-            <div id="gameContainer">
-                <canvas id="gameCanvas" width="400" height="600"></canvas>
-                <button id="startButton">実験開始</button>
-                <div id="gameOver">
-                    <h2>実験終了</h2>
-                    <p>最終スコア: <span id="finalScore">0</span>pt</p>
-                    <div id="highScores">
-                        <h3>ハイスコア</h3>
-                        <ol id="highScoreList"></ol>
+            <div id="gamePanel">
+                <div id="gameInfo">
+                    レベル: <span id="level">1</span><br>
+                    エネルギー: <span id="energy">1</span> MeV<br>
+                    スコア: <span id="score">0</span>pt
+                </div>
+                <div id="gameContainer">
+                    <canvas id="gameCanvas"></canvas>
+                    <button id="startButton">実験開始</button>
+                    <button id="directionButton">方向転換</button>
+                    <div id="gameOver">
+                        <h2>実験終了</h2>
+                        <p>最終スコア: <span id="finalScore">0</span>pt</p>
+                        <div id="highScores">
+                            <h3>ハイスコア</h3>
+                            <ol id="highScoreList"></ol>
+                        </div>
+                        <button id="restartButton">再実験</button>
+                        <button id="clearDataButton">データ削除</button>
                     </div>
-                    <button id="restartButton">再実験</button>
-                    <button id="clearDataButton">データ削除</button>
                 </div>
             </div>
-            <div id="gameControlsWrapper">
-                <button id="directionButton">方向転換</button>
-                <div id="controls">
-                    SPACEで方向転換, ← →で軌道調整
-                </div>
+            <div id="currentDiscoveryPanel" class="panel">
+                <h3>今回の発見</h3>
+                <ul id="currentDiscoveryList" class="discoveryList"></ul>
             </div>
-        </div>
-        <div id="currentDiscoveryPanel" class="panel">
-            <h3>今回の発見</h3>
-            <ul id="currentDiscoveryList" class="discoveryList"></ul>
         </div>
     </div>
 
@@ -324,6 +359,9 @@
         let discoveryHistory = {};
         let highScores = [];
 
+        const CANVAS_WIDTH = 400;
+        const CANVAS_HEIGHT = 600;
+
         const discoveries = {
             common: [
                 { name: "電子-陽電子対生成", description: "電子と陽電子のペアが生成されました。これは、高エネルギー光子が強い電場と相互作用して起こる現象です。この過程は、アインシュタインの質量とエネルギーの等価性（E=mc²）を直接的に示す重要な例です。", points: 10, rarity: "common" },
@@ -345,6 +383,8 @@
         };
 
         function initGame() {
+            canvas.width = CANVAS_WIDTH;
+            canvas.height = CANVAS_HEIGHT;
             isLevelCompleting = false;
             player = {
                 x: canvas.width / 2,
@@ -356,9 +396,7 @@
                 ax: 0,
                 baseVerticalSpeed: 2,
                 direction: -1,
-                visible: true,
-                touchStartX: 0,
-                isTouching: false
+                visible: true
             };
             goal = {
                 x: canvas.width / 2,
@@ -463,13 +501,8 @@
                 }
 
                 // 水平方向の移動
-                if (player.isTouching) {
-                    const touchDeltaX = player.touchCurrentX - player.touchStartX;
-                    player.vx = touchDeltaX * 0.1;
-                } else {
-                    player.vx += player.ax;
-                    player.vx = Math.max(Math.min(player.vx, player.maxSpeed), -player.maxSpeed);
-                }
+                player.vx += player.ax;
+                player.vx = Math.max(Math.min(player.vx, player.maxSpeed), -player.maxSpeed);
                 player.vx *= 0.98; // 摩擦
                 player.x += player.vx;
 
@@ -718,22 +751,18 @@
             experimentInfoModal.style.display = "block";
         }
 
-        function updateControlsDisplay() {
-            const isMobile = window.innerWidth < 768 || ('ontouchstart' in window);
-            directionButton.style.display = isMobile ? 'block' : 'none';
-            document.getElementById('controls').textContent = isMobile ? 'スワイプで軌道調整' : 'SPACEで方向転換, ← →で軌道調整';
-        }
-
         function resizeGame() {
-            const gameContainer = document.getElementById('gameContainer');
-            const aspectRatio = canvas.height / canvas.width;
+            const gamePanel = document.getElementById('gamePanel');
+            const aspectRatio = CANVAS_HEIGHT / CANVAS_WIDTH;
             const newWidth = Math.min(400, window.innerWidth - 40);
             const newHeight = newWidth * aspectRatio;
             
-            gameContainer.style.width = `${newWidth}px`;
-            gameContainer.style.height = `${newHeight}px`;
+            gamePanel.style.width = `${newWidth}px`;
+            gamePanel.style.height = `${newHeight}px`;
 
-            updateControlsDisplay();
+            // キャンバスのサイズは変更せず、スケーリングで対応
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
         }
 
         startButton.addEventListener('click', startGame);
@@ -780,19 +809,27 @@
 
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            player.isTouching = true;
-            player.touchStartX = e.touches[0].clientX;
-            player.touchCurrentX = e.touches[0].clientX;
+            if (gameState === 'playing' && player.visible) {
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const x = (touch.clientX - rect.left) * (CANVAS_WIDTH / rect.width);
+                if (x < CANVAS_WIDTH / 2) {
+                    player.ax = -player.baseAcceleration;
+                } else {
+                    player.ax = player.baseAcceleration;
+                }
+            }
         });
 
         canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
-            player.touchCurrentX = e.touches[0].clientX;
         });
 
         canvas.addEventListener('touchend', (e) => {
             e.preventDefault();
-            player.isTouching = false;
+            if (gameState === 'playing' && player.visible) {
+                player.ax = 0;
+            }
         });
 
         Array.from(closeButtons).forEach(button => {

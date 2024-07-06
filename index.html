@@ -10,14 +10,20 @@
             margin: 0; 
             font-family: 'Roboto Mono', monospace;
             color: #39FF14;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
         }
         #gameWrapper {
             display: flex;
+            flex-direction: row;
             justify-content: center;
             align-items: flex-start;
-            padding: 20px;
-            box-sizing: border-box;
-            min-height: 100vh;
+            max-width: 1200px;
+            width: 100%;
         }
         .panel {
             background-color: rgba(0,0,0,0.7);
@@ -25,10 +31,12 @@
             padding: 10px;
             margin: 0 10px;
             border-radius: 10px;
-            width: 200px;
+            width: 250px;
+            box-sizing: border-box;
         }
         #gamePanel {
             width: 400px;
+            margin: 0 20px;
         }
         h1, h2, h3 {
             font-family: 'Orbitron', sans-serif;
@@ -58,15 +66,21 @@
             border-radius: 10px;
             box-shadow: 0 0 10px #39FF14;
         }
+        #gameControlsWrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
         #controls {
             background-color: rgba(0, 0, 0, 0.7);
             padding: 5px;
             border-radius: 5px;
             border: 1px solid #39FF14;
-            margin-top: 10px;
             text-align: center;
+            flex-grow: 1;
         }
-        #startButton, #restartButton, #clearDataButton {
+        button {
             font-family: 'Orbitron', sans-serif;
             font-size: 18px;
             padding: 10px 20px;
@@ -78,7 +92,7 @@
             border-radius: 5px;
             transition: all 0.3s;
         }
-        #startButton:hover, #restartButton:hover, #clearDataButton:hover {
+        button:hover {
             background-color: #39FF14;
             color: #000000;
             box-shadow: 0 0 10px #39FF14;
@@ -182,7 +196,8 @@
                 align-items: center;
             }
             .panel {
-                width: 400px;
+                width: 100%;
+                max-width: 400px;
                 margin: 10px 0;
             }
             #gamePanel {
@@ -200,10 +215,11 @@
             #gameContainer {
                 width: 100%;
                 height: auto;
+                aspect-ratio: 2 / 3;
             }
             canvas {
                 width: 100%;
-                height: auto;
+                height: 100%;
             }
         }
     </style>
@@ -219,7 +235,7 @@
                 <h1 id="gameTitle">粒子加速実験室</h1>
                 レベル: <span id="level">1</span> | 
                 エネルギー: <span id="energy">1</span> MeV | 
-                スコア: <span id="score"></span>
+                スコア: <span id="score">0</span>pt
             </div>
             <div id="gameContainer">
                 <canvas id="gameCanvas" width="400" height="600"></canvas>
@@ -232,11 +248,14 @@
                         <ol id="highScoreList"></ol>
                     </div>
                     <button id="restartButton">再実験</button>
-                    <button id="clearDataButton">ゲームデータを削除</button>
+                    <button id="clearDataButton">データ削除</button>
                 </div>
             </div>
-            <div id="controls">
-                SPACEで方向転換, ← →で軌道調整
+            <div id="gameControlsWrapper">
+                <button id="directionButton">方向転換</button>
+                <div id="controls">
+                    SPACEで方向転換, ← →で軌道調整
+                </div>
             </div>
         </div>
         <div id="currentDiscoveryPanel" class="panel">
@@ -279,6 +298,7 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const startButton = document.getElementById('startButton');
+        const directionButton = document.getElementById('directionButton');
         const restartButton = document.getElementById('restartButton');
         const clearDataButton = document.getElementById('clearDataButton');
         const gameOverScreen = document.getElementById('gameOver');
@@ -336,7 +356,9 @@
                 ax: 0,
                 baseVerticalSpeed: 2,
                 direction: -1,
-                visible: true
+                visible: true,
+                touchStartX: 0,
+                isTouching: false
             };
             goal = {
                 x: canvas.width / 2,
@@ -433,16 +455,21 @@
 
         function updateGame() {
             if (player.visible) {
-                // 垂直方向の移動（エネルギーに応じて速度が変化）
+                // 垂直方向の移動
                 let verticalSpeed = player.baseVerticalSpeed * (1 + energyLevel / 50);
                 player.y += verticalSpeed * player.direction;
                 if (player.y <= player.radius || player.y >= canvas.height - player.radius) {
                     player.direction *= -1;
                 }
 
-                // 水平方向の移動（エネルギーに依存しない）
-                player.vx += player.ax;
-                player.vx = Math.max(Math.min(player.vx, player.maxSpeed), -player.maxSpeed);
+                // 水平方向の移動
+                if (player.isTouching) {
+                    const touchDeltaX = player.touchCurrentX - player.touchStartX;
+                    player.vx = touchDeltaX * 0.1;
+                } else {
+                    player.vx += player.ax;
+                    player.vx = Math.max(Math.min(player.vx, player.maxSpeed), -player.maxSpeed);
+                }
                 player.vx *= 0.98; // 摩擦
                 player.x += player.vx;
 
@@ -595,7 +622,7 @@
         function updateDisplay() {
             levelDisplay.textContent = level;
             energyDisplay.textContent = Math.floor(energyLevel);
-            scoreDisplay.textContent = score ? score + "pt" : "";
+            scoreDisplay.textContent = score;
         }
 
         function gameLoop() {
@@ -611,15 +638,16 @@
             level = 1;
             score = 0;
             currentDiscoveries = [];
-            updateCurrentDiscoveryDisplay(); // 今回の発見リストをクリア
+            updateCurrentDiscoveryDisplay();
             initGame();
             startButton.style.display = 'none';
+            directionButton.style.display = 'block';
             gameLoop();
         }
 
         function gameOver() {
             gameState = 'over';
-            finalScoreDisplay.textContent = score + "pt";
+            finalScoreDisplay.textContent = score;
             updateHighScores();
             displayHighScores();
             gameOverScreen.style.display = 'block';
@@ -690,6 +718,24 @@
             experimentInfoModal.style.display = "block";
         }
 
+        function updateControlsDisplay() {
+            const isMobile = window.innerWidth < 768 || ('ontouchstart' in window);
+            directionButton.style.display = isMobile ? 'block' : 'none';
+            document.getElementById('controls').textContent = isMobile ? 'スワイプで軌道調整' : 'SPACEで方向転換, ← →で軌道調整';
+        }
+
+        function resizeGame() {
+            const gameContainer = document.getElementById('gameContainer');
+            const aspectRatio = canvas.height / canvas.width;
+            const newWidth = Math.min(400, window.innerWidth - 40);
+            const newHeight = newWidth * aspectRatio;
+            
+            gameContainer.style.width = `${newWidth}px`;
+            gameContainer.style.height = `${newHeight}px`;
+
+            updateControlsDisplay();
+        }
+
         startButton.addEventListener('click', startGame);
         restartButton.addEventListener('click', () => {
             gameOverScreen.style.display = 'none';
@@ -697,6 +743,12 @@
         });
         clearDataButton.addEventListener('click', clearGameData);
         gameTitle.addEventListener('click', showExperimentInfo);
+
+        directionButton.addEventListener('click', () => {
+            if (gameState === 'playing' && player.visible) {
+                player.direction *= -1;
+            }
+        });
 
         document.addEventListener('keydown', (e) => {
             if (gameState === 'playing' && player.visible) {
@@ -726,6 +778,23 @@
             }
         });
 
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            player.isTouching = true;
+            player.touchStartX = e.touches[0].clientX;
+            player.touchCurrentX = e.touches[0].clientX;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            player.touchCurrentX = e.touches[0].clientX;
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            player.isTouching = false;
+        });
+
         Array.from(closeButtons).forEach(button => {
             button.onclick = function() {
                 detailModal.style.display = "none";
@@ -741,6 +810,9 @@
                 experimentInfoModal.style.display = "none";
             }
         }
+
+        window.addEventListener('resize', resizeGame);
+        resizeGame();
 
         loadDiscoveryHistory();
         initGame();

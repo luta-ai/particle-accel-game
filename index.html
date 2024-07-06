@@ -93,24 +93,47 @@
             width: 100%;
             height: 100%;
         }
-        #directionButton {
+        #buttonContainer {
             position: absolute;
             bottom: 10px;
-            left: 10px;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 16px;
-            padding: 20px 15px;
-            height: 80px;
-            cursor: pointer;
-            background-color: rgba(0, 0, 0, 0.3);
-            color: rgba(57, 255, 20, 0.6);
-            border: 1px solid rgba(57, 255, 20, 0.6);
-            border-radius: 5px;
-            transition: all 0.3s;
-            z-index: 10;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            padding: 0 10px;
+            pointer-events: none;
         }
-        #directionButton:hover {
+        .game-button {
             background-color: rgba(57, 255, 20, 0.3);
+            border: 2px solid rgba(57, 255, 20, 0.7);
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 24px;
+            padding: 10px 20px;
+            border-radius: 5px;
+            pointer-events: none;
+        }
+        #leftButton, #rightButton {
+            font-size: 36px;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #directionButton {
+            font-size: 16px;
+        }
+        .touch-area {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 50%;
+        }
+        #leftTouchArea {
+            left: 0;
+        }
+        #rightTouchArea {
+            right: 0;
         }
         #startButton, #restartButton, #clearDataButton {
             font-family: 'Orbitron', sans-serif;
@@ -177,7 +200,6 @@
         .rare { color: #FFD700; }
         .very-rare { color: #FF1493; }
         .ultra-rare { color: #00FFFF; }
-
         .modal {
             display: none;
             position: fixed;
@@ -224,7 +246,6 @@
             margin-bottom: 15px;
             padding-left: 20px;
         }
-
         @media (max-width: 1023px) {
             #mainGameArea {
                 flex-direction: column;
@@ -247,7 +268,6 @@
                 order: 3;
             }
         }
-
         @media (max-width: 480px) {
             #gamePanel {
                 max-width: 100%;
@@ -274,7 +294,13 @@
                 <div id="gameContainer">
                     <canvas id="gameCanvas"></canvas>
                     <button id="startButton">実験開始</button>
-                    <button id="directionButton">方向転換</button>
+                    <div id="buttonContainer">
+                        <button id="leftButton" class="game-button">◁</button>
+                        <button id="directionButton" class="game-button">方向転換</button>
+                        <button id="rightButton" class="game-button">▷</button>
+                    </div>
+                    <div id="leftTouchArea" class="touch-area"></div>
+                    <div id="rightTouchArea" class="touch-area"></div>
                     <div id="gameOver">
                         <h2>実験終了</h2>
                         <p>最終スコア: <span id="finalScore">0</span>pt</p>
@@ -329,6 +355,8 @@
         const ctx = canvas.getContext('2d');
         const startButton = document.getElementById('startButton');
         const directionButton = document.getElementById('directionButton');
+        const leftButton = document.getElementById('leftButton');
+        const rightButton = document.getElementById('rightButton');
         const restartButton = document.getElementById('restartButton');
         const clearDataButton = document.getElementById('clearDataButton');
         const gameOverScreen = document.getElementById('gameOver');
@@ -345,6 +373,8 @@
         const modalDescription = document.getElementById('modalDescription');
         const closeButtons = document.getElementsByClassName("close");
         const gameTitle = document.getElementById('gameTitle');
+        const leftTouchArea = document.getElementById('leftTouchArea');
+        const rightTouchArea = document.getElementById('rightTouchArea');
 
         let gameState = 'start';
         let player, goal, obstacles, energyLevel, score, level;
@@ -357,7 +387,6 @@
         const CANVAS_WIDTH = 400;
         const CANVAS_HEIGHT = 600;
         let canvasScale = 1;
-
 
         const discoveries = {
             common: [
@@ -596,7 +625,6 @@
             updateCurrentDiscoveryDisplay();
         }
 
-
         function updateCurrentDiscoveryDisplay() {
             currentDiscoveryList.innerHTML = '';
             currentDiscoveries.forEach(discovery => {
@@ -673,7 +701,6 @@
             updateCurrentDiscoveryDisplay();
             initGame();
             startButton.style.display = 'none';
-            directionButton.style.display = 'block';
             gameLoop();
         }
 
@@ -780,6 +807,29 @@
             }
         });
 
+        leftTouchArea.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState === 'playing' && player.visible) {
+                player.ax = -player.baseAcceleration;
+            }
+        });
+
+        rightTouchArea.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState === 'playing' && player.visible) {
+                player.ax = player.baseAcceleration;
+            }
+        });
+
+        [leftTouchArea, rightTouchArea].forEach(area => {
+            area.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                if (gameState === 'playing' && player.visible) {
+                    player.ax = 0;
+                }
+            });
+        });
+
         document.addEventListener('keydown', (e) => {
             if (gameState === 'playing' && player.visible) {
                 switch(e.code) {
@@ -805,31 +855,6 @@
                         player.ax = 0;
                         break;
                 }
-            }
-        });
-
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (gameState === 'playing' && player.visible) {
-                const touch = e.touches[0];
-                const rect = canvas.getBoundingClientRect();
-                const x = (touch.clientX - rect.left) / canvasScale;
-                if (x < CANVAS_WIDTH / 2) {
-                    player.ax = -player.baseAcceleration;
-                } else {
-                    player.ax = player.baseAcceleration;
-                }
-            }
-        });
-
-        canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-        });
-
-        canvas.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            if (gameState === 'playing' && player.visible) {
-                player.ax = 0;
             }
         });
 

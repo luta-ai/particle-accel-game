@@ -1,4 +1,4 @@
-# 粒子加速実験ゲーム (Particle Accelerator Game)
+# 粒子加速実験室 (Particle Accelerator Game)
 
 高エネルギー物理学の世界を体験する、エキサイティングな粒子加速実験シミュレーションゲームです。
 

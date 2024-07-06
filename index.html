@@ -50,8 +50,9 @@
             max-width: 1200px;
         }
         #gamePanel {
-            width: 400px;
-            height: 600px;
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 2 / 3;
             position: relative;
             overflow: hidden;
             border: 2px solid #39FF14;
@@ -98,11 +99,12 @@
             left: 10px;
             font-family: 'Orbitron', sans-serif;
             font-size: 16px;
-            padding: 10px 15px;
+            padding: 20px 15px;
+            height: 80px;
             cursor: pointer;
-            background-color: rgba(0, 0, 0, 0.5);
-            color: #39FF14;
-            border: 1px solid #39FF14;
+            background-color: rgba(0, 0, 0, 0.3);
+            color: rgba(57, 255, 20, 0.6);
+            border: 1px solid rgba(57, 255, 20, 0.6);
             border-radius: 5px;
             transition: all 0.3s;
             z-index: 10;
@@ -228,17 +230,18 @@
                 flex-direction: column;
                 align-items: center;
             }
-            #gamePanel, #discoveryHistoryPanel, #currentDiscoveryPanel {
+            #gamePanel {
                 width: 100%;
                 max-width: 400px;
+                aspect-ratio: 2 / 3;
                 margin: 10px 0;
             }
-            #gamePanel {
-                height: 600px;
-            }
             #discoveryHistoryPanel, #currentDiscoveryPanel {
+                width: 100%;
+                max-width: 400px;
                 height: auto;
                 max-height: 300px;
+                margin: 10px 0;
             }
             #discoveryHistoryPanel {
                 order: 3;
@@ -247,15 +250,7 @@
 
         @media (max-width: 480px) {
             #gamePanel {
-                height: 0;
-                padding-bottom: 150%; /* 2:3のアスペクト比を維持 */
-            }
-            #gameContainer {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
+                max-width: 100%;
             }
         }
     </style>
@@ -361,6 +356,8 @@
 
         const CANVAS_WIDTH = 400;
         const CANVAS_HEIGHT = 600;
+        let canvasScale = 1;
+
 
         const discoveries = {
             common: [
@@ -385,6 +382,7 @@
         function initGame() {
             canvas.width = CANVAS_WIDTH;
             canvas.height = CANVAS_HEIGHT;
+            resizeCanvas();
             isLevelCompleting = false;
             player = {
                 x: canvas.width / 2,
@@ -598,6 +596,7 @@
             updateCurrentDiscoveryDisplay();
         }
 
+
         function updateCurrentDiscoveryDisplay() {
             currentDiscoveryList.innerHTML = '';
             currentDiscoveries.forEach(discovery => {
@@ -751,7 +750,7 @@
             experimentInfoModal.style.display = "block";
         }
 
-        function resizeGame() {
+        function resizeCanvas() {
             const gamePanel = document.getElementById('gamePanel');
             const aspectRatio = CANVAS_HEIGHT / CANVAS_WIDTH;
             const newWidth = Math.min(400, window.innerWidth - 40);
@@ -759,6 +758,8 @@
             
             gamePanel.style.width = `${newWidth}px`;
             gamePanel.style.height = `${newHeight}px`;
+
+            canvasScale = newWidth / CANVAS_WIDTH;
 
             // キャンバスのサイズは変更せず、スケーリングで対応
             canvas.style.width = '100%';
@@ -812,7 +813,7 @@
             if (gameState === 'playing' && player.visible) {
                 const touch = e.touches[0];
                 const rect = canvas.getBoundingClientRect();
-                const x = (touch.clientX - rect.left) * (CANVAS_WIDTH / rect.width);
+                const x = (touch.clientX - rect.left) / canvasScale;
                 if (x < CANVAS_WIDTH / 2) {
                     player.ax = -player.baseAcceleration;
                 } else {
@@ -848,9 +849,25 @@
             }
         }
 
-        window.addEventListener('resize', resizeGame);
-        resizeGame();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // ダブルタップによるズームを防止
+        document.addEventListener('touchstart', function(event) {
+            if (event.touches.length > 1) {
+                event.preventDefault();
+            }
+        }, { passive: false });
 
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        resizeCanvas();
         loadDiscoveryHistory();
         initGame();
         drawGame();
